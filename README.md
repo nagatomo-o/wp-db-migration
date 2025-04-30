@@ -19,3 +19,7 @@ This program is designed to solve these problems by performing string replacemen
 ## Usage
 1. edit `config.php` file
 2. run `php main.php`
+
+### Notice
+
+If replacements in config.php is left empty, no replacement will be performed and only the length of characters in the serialized PHP string will be normalized.

@@ -33,14 +33,9 @@ function db_escape_string(string $str): string
 // Get config
 $config = require __DIR__ . '/config.php';
 
-// Check if the replacements value in config.php is empty
-if (empty($config['replacements'])) {
-  die('The replacements value in config.php is empty');
-}
-
 // Get keywords and replacements
-$keywords = array_keys($config['replacements']);
-$replacements = array_values($config['replacements']);
+$keywords = $config['replacements'] ? array_keys($config['replacements']) : [];
+$replacements = $config['replacements'] ? array_values($config['replacements']) : [];
 
 // Loop through the files
 foreach ($config['files'] as $input_file_path => $output_file_path) {
@@ -66,7 +61,7 @@ foreach ($config['files'] as $input_file_path => $output_file_path) {
 
   // Create a pattern to match PHP string objects
   $pattern = '/' . implode('|', [
-    's:\d+:\\\".*?\\\";',
+    's:\d+:\\\"(.*?)\\\";',
     ...array_map(fn($keyword) => preg_quote($keyword, '/'), $keywords)
   ]) . '/';
 
@@ -80,13 +75,15 @@ foreach ($config['files'] as $input_file_path => $output_file_path) {
     $line = preg_replace_callback($pattern, function ($matches) use ($keywords, $replacements): string {
 
       // If the string is a PHP string object
-      if (str_starts_with($matches[0], 's:')) {
+      if (preg_match('/s:\d+:\\\"(.*?)\\\";/', $matches[0])) {
         // Unserialize the string
         $str = @unserialize(db_unescape_string($matches[0]));
 
         // Check if the string is unserialized successfully
-        if ($str === false)
-          die("Unserialize Error {$matches[0]}");
+        if ($str === false) {
+          echo "Warning: Unserializing {$matches[0]} failed\n";
+          $str = db_unescape_string($matches[1]);
+        }
 
         // Replace the keywords with the replacements
         $str = str_replace($keywords, $replacements, $str);
